@@ -7,8 +7,10 @@ Created on Thu Sep  8 01:37:04 2016
 import MyecgError
 import tensorflow as tf
 import numpy as np
-import 
-
+import sklearn as sk
+import os
+import time
+import platform
 def add_layer(name, inputs, in_size, out_size, activation_function=None):
     # add one more layer and return the output of this layer
     with tf.name_scope(name):
@@ -37,6 +39,16 @@ def compute_accuracy(v_xs, v_ys):
     return result
 
 
+def confusion_matrix(v_xs, v_ys):
+    global prediction
+    y_pre = sess.run(prediction, feed_dict={xs: v_xs})
+    result = tf.argmax(y_pre, 1)
+    true = tf.argmax(v_ys, 1)
+    y_result , y_true= sess.run([result,true], feed_dict={xs:v_xs, ys:v_ys})
+    conf_matrix = sk.metrics.confusion_matrix(y_true, y_result)
+    return conf_matrix
+
+
 def normalize(array):
     arrmin = np.min(array)
     array = array-arrmin
@@ -44,16 +56,6 @@ def normalize(array):
     return array/arrmax
 
 
-#def random_batch(example, label, batch_num=None):
-#    min_after_dequeue = 10000
-#    capacity = min_after_dequeue + 3 * 100
-#    batch_xs, batch_ys = tf.train.shuffle_batch([x_traindata, y_train_data], 
-#                                batch_size=100, capacity=capacity,
-#                                min_after_dequeue=min_after_dequeue)
-#    with tf.Session() as sess:
-#        a = batch_xs.eval()
-#        b = batch_ys.eval())                          
-#    return batch_xs, batch_ys
 def random_batch(example, label, batch_num=None):
     example_num = len(example)
     if batch_num is None:
@@ -65,52 +67,7 @@ def random_batch(example, label, batch_num=None):
     order = np.argsort(rand)
     return example[order[:batch_num]], label[order[:batch_num]]
 
-#def random_mix(amount, *args):
-#    """
-#    Mix data of several types by randomlize method
-#    parameter
-#    ---------
-#    amount : int
-#        the number of per type user want to mix in output data
-#    returns
-#    -------
-#    mixed_data : list
-#        target data after mixed
-#    remain_data : list
-#        data isn't in mixed_data
-#    """
-#    mixed_data = []
-#    remain_data = []
-#    for count,data in enumerate(args):
-#        cnt = 0
-#        temp_data = []
-#        temp_remain = []
-#        for i in range(len(data)):
-#            if np.random.random_integers(0,1)==1:
-#                temp_data.append(data[i])
-#                cnt += 1
-#            else:
-#                temp_remain.append(data[i])
-#            if cnt>=amount:
-#                temp_remain.extend(data[i+1:])
-#                break
-#            elif cnt>=(len(data)/2):
-#                temp_remain.extend(data[i+1:])
-#                while(True):
-#                    vacancy = amount-len(temp_data)
-#                    if vacancy>=len(temp_data):
-#                        temp_data.extend(temp_data)
-#                    elif vacancy<=0:
-#                        break
-#                    else:
-#                        temp_data.extend(temp_data[:vacancy])
-#                break
-#            if i==len(data)-1 and len(temp_data)<amount:
-#                for 
-#        mixed_data.extend(temp_data)
-#        remain_data.extend(temp_remain)
-#    return mixed_data, remain_data
-    
+
 def random_mix(amount, *args):
     """
     Mix data of several types by randomlize method
@@ -151,8 +108,27 @@ def random_mix(amount, *args):
                     temp_data.extend(temp_data[:vacancy])
         mixed_data.extend(temp_data)
     return np.array(mixed_data), np.array(remain_data)
-        
-#def  input_pipeline():
+
+
+def submit_report(model, time_cost, accuracy, train_errors, test_errors, confusion_matrix):
+    """
+    report the result of this training, report format example as follows
+    
+    REPORT NO.number (system, machine name, release, version, machine, processor)
+    TRAINING MODEL    : model
+    TRAINING TIME     : time_cost
+    TRAINING ACCURACY : accuracy
+    4. traning errors and test errors
+    5. confusion matrix
+    """
+    number = time.strftime('%y%m%d%H%M')
+    report_path = os.path.join('reports', model, 'report'+number+'.txt')
+    system_inform = platform.uname()
+    with open(report_path, 'w') as report:
+        report.write('REPORT NO.{0} {1}\n'.format(number, system_inform))
+        report.write('TRAINING MODEL    : {0}\n'.format(model))
+        report.write('TRAINING TIME     : {0:.3f} sec\n'.format(time_cost))
+        report.write('TRAINING ACCURACY : {0:.3f}%\n')
     
     
 #read real data
@@ -164,8 +140,10 @@ data_close_TP_pairs = list(np.loadtxt('ECG_learning_Data_close_TP_pairs.txt', de
 data_lawP = list(np.loadtxt('ECG_learning_Data_lawP.txt', delimiter=','))
 #data_noise = list(np.loadtxt('ECG_learning_Data_noise.txt', delimiter=','))
 
+#train_data, test_data = random_mix(150, data_normal, data_STEMI, data_combined,
+#                                   data_AF, data_close_TP_pairs, data_lawP)
 train_data, test_data = random_mix(150, data_normal, data_STEMI, data_combined,
-                                   data_AF, data_close_TP_pairs, data_lawP)
+                                   data_AF)
 
 #train_data = np.array(data_normal[:150] + data_STEMI[:37])
 #test_data = np.array(data_normal[150:] + data_STEMI[37:])
@@ -226,7 +204,7 @@ sess.run(init)
 
 train_errors = []
 accuracys = []
-for i in range(5000):
+for i in range(1000):
     # training
 #    batch_xs = x_traindata
 #    batch_ys = y_train_data
@@ -240,10 +218,11 @@ for i in range(5000):
         train_errors.append(train_error)
         accuracys.append(accuracy)
         print('step {0}\naccuracy : {1:.3f}%'.format(i+1,accuracy*100))
-        print('cross_entropy : {0}'.format(loss))
+        print('cross_entropy : {0}'.format(accuracy))
     #        print(sess.run(prediction, feed_dict={xs:batch_xs}))
         if accuracy==1:
             break
-
+confusion_matrix = confusion_matrix(x_testdata, y_testdata)
+print confusion_matrix
 print('Mission complete')
 sess.close()
