@@ -35,9 +35,10 @@ def compute_accuracy(v_xs, v_ys):
     global prediction
     y_pre = sess.run(prediction, feed_dict={xs: v_xs})
     correct_prediction = tf.equal(tf.argmax(y_pre,1), tf.argmax(v_ys,1))
+    fail_index = np.where(correct_prediction==0)
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     result = sess.run(accuracy, feed_dict={xs: v_xs, ys: v_ys})
-    return result
+    return result, fail_index
 
 
 def confusion_matrix(v_xs, v_ys):
@@ -111,14 +112,14 @@ def random_mix(amount, *args):
     return np.array(mixed_data), np.array(remain_data)
 
 
-def submit_report(model, time_cost, step,accuracy, train_errors, test_errors, confusion_matrix):
+def submit_report(model, train_data, test_data, time_cost, step,accuracy, train_errors, test_errors, confusion_matrix):
     """
     report the result of this training, text report format example as follows
     
     REPORT NO.number (system, machine name, release, version, machine, processor)
     TRAINING MODEL    : model
     TRAINING TIME     : time_cost
-    TRAINING ACCURACY : accuracy
+    TEST ACCURACY     : accuracy
     CONFUSION MATRIX  :
         1    2    3    4    5    6
     1   150  0    0    0    0    0
@@ -137,12 +138,14 @@ def submit_report(model, time_cost, step,accuracy, train_errors, test_errors, co
     report_path = os.path.join('reports', model, 'report'+number,'report'+number)
     os.makedirs(os.path.dirname(report_path))
     system_inform = platform.uname()
+    
     with open(report_path+'.txt', 'w') as report:
         report.write('REPORT NO.{0} {1}\n'.format(number, system_inform))
         report.write('TRAINING MODEL    : {0}\n'.format(model))
         report.write('TRAINING STEP     : {0}\n'.format(step))
         report.write('TRAINING TIME     : {0:.3f} sec\n'.format(time_cost))
-        report.write('TRAINING ACCURACY : {0:.3f}%\n'.format(accuracy))
+        report.write('TEST ACCURACY     : {0:.3f}%\n'.format(accuracy))
+        
         report.write('CONFUSION MATRIX  : \n')
         report.write('\t')
         for i in range(len(confusion_matrix)):
@@ -152,26 +155,28 @@ def submit_report(model, time_cost, step,accuracy, train_errors, test_errors, co
             report.write('{0}\t'.format(i+1))
             for j in range(len(confusion_matrix[i])):
                 report.write('{0}\t'.format(confusion_matrix[i,j]))
-            report.write('\n')
-#    plt.Figure(figsize=(3200/500, 1720/150), dpi=150)
+            report.write('\n')   
     plt.plot(train_errors)
     plt.plot(test_errors)
     plt.legend(['train error','test error'], fontsize='small')
     plt.title('Error Curve')
     plt.savefig(report_path+'.png', dpi=450, bbox_inches='tight', pad_inches=0)
     plt.clf()
-    
-    
+
+
+data_list = {'normal','combined','STEMI','close_TP_pairs','close_TP_pairs','lawP'}    
 #read real data
 data_normal = list(np.loadtxt('ECG_learning_Data_normal.txt', delimiter=','))
-data_STEMI = list(np.loadtxt('ECG_learning_Data_STEMI.txt', delimiter=','))
 data_combined = list(np.loadtxt('ECG_learning_Data_combined.txt', delimiter=','))
+data_STEMI = list(np.loadtxt('ECG_learning_Data_STEMI.txt', delimiter=','))
 data_AF = list(np.loadtxt('ECG_learning_Data_AF.txt', delimiter=','))
 data_close_TP_pairs = list(np.loadtxt('ECG_learning_Data_close_TP_pairs.txt', delimiter=','))
 data_lawP = list(np.loadtxt('ECG_learning_Data_lawP.txt', delimiter=','))
 #data_noise = list(np.loadtxt('ECG_learning_Data_noise.txt', delimiter=','))
 
-train_data, test_data = random_mix(150, data_normal, data_STEMI, data_combined,
+train_data_len = 150
+
+train_data, test_data = random_mix(train_data_len, data_normal, data_STEMI, data_combined,
                                    data_AF, data_close_TP_pairs, data_lawP)
 #train_data, test_data = random_mix(150, data_normal, data_STEMI, data_combined,
 #                                   data_AF)
@@ -249,26 +254,33 @@ for i in range(maximun_step):
 #    batch_ys = y_train_data
     batch_xs, batch_ys = random_batch(x_traindata, y_traindata, batch_num=100)
     sess.run(train_step, feed_dict={xs:batch_xs,ys:batch_ys})
-    if (i+1) % 10 == 0:
+#    if (i+1) % 10 == 0:
 #        result = sess.run(merged, feed_dict={xs:batch_xs,ys:batch_ys})
 #        writer.add_summary(result, i)
-        train_error = sess.run(cross_entropy, feed_dict={xs:batch_xs,ys:batch_ys})
-        test_error = sess.run(cross_entropy, feed_dict={xs:x_testdata,ys:y_testdata})
-        accuracy = compute_accuracy(x_testdata, y_testdata)
-        train_errors.append(train_error)
-        test_errors.append(test_error)
+    train_error = sess.run(cross_entropy, feed_dict={xs:batch_xs,ys:batch_ys})
+    test_error = sess.run(cross_entropy, feed_dict={xs:x_testdata,ys:y_testdata})
+    accuracy, fail_index = compute_accuracy(x_testdata, y_testdata)
+    train_errors.append(train_error)
+    test_errors.append(test_error)
 #        accuracys.append(accuracy)
-        print('step {0}\naccuracy : {1:.3f}%'.format(i+1,accuracy*100))
-        print('cross_entropy : {0}'.format(accuracy))
+    print('step {0}\naccuracy : {1:.3f}%'.format(i+1,accuracy*100))
+    print('cross_entropy : {0}'.format(accuracy))
+    step = i+1
+#        print(sess.run(prediction, feed_dict={xs:batch_xs}))
+    if accuracy==1:
         step = i+1
-    #        print(sess.run(prediction, feed_dict={xs:batch_xs}))
-        if accuracy==1:
-            step = i+1
-            break
+        break
     
 time_cost = time.time()-start_time
 confusion_matrix = confusion_matrix(x_testdata, y_testdata)
-submit_report('Basic_Classfication', time_cost, step, accuracy*100, train_errors, test_errors, confusion_matrix)
+submit_report('Basic_Classfication', y_traindata, y_testdata, time_cost, step, accuracy*100, train_errors, test_errors, confusion_matrix)
 print confusion_matrix
 print('Mission complete')
+print('fail data :')
+plt.plot(x_testdata[fail_index])
 sess.close()
+
+
+#if __name__=='__main__':
+#    for i in range(10):
+#    main()
