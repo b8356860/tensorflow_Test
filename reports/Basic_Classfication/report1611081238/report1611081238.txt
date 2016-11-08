@@ -1,0 +1,13 @@
+REPORT NO.1611081238 ('Linux', 'siang-VirtualBox', '4.4.0-45-generic', '#66-Ubuntu SMP Wed Oct 19 14:12:37 UTC 2016', 'x86_64', 'x86_64')
+TRAINING MODEL    : Basic_Classfication
+TRAINING STEP     : 1000
+TRAINING TIME     : 31.432 sec
+TRAINING ACCURACY : 96.786%
+CONFUSION MATRIX  : 
+	1	2	3	4	5	6	
+1	150	0	0	0	0	0	
+2	0	655	0	0	1	0	
+3	0	0	37	0	0	0	
+4	0	0	0	56	0	0	
+5	0	0	0	0	1016	10	
+6	0	0	0	0	53	13	

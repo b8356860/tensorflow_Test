@@ -11,6 +11,7 @@ import sklearn as sk
 import os
 import time
 import platform
+import matplotlib.pyplot as plt
 def add_layer(name, inputs, in_size, out_size, activation_function=None):
     # add one more layer and return the output of this layer
     with tf.name_scope(name):
@@ -110,25 +111,55 @@ def random_mix(amount, *args):
     return np.array(mixed_data), np.array(remain_data)
 
 
-def submit_report(model, time_cost, accuracy, train_errors, test_errors, confusion_matrix):
+def submit_report(model, time_cost, step,accuracy, train_errors, test_errors, confusion_matrix):
     """
-    report the result of this training, report format example as follows
+    report the result of this training, text report format example as follows
     
     REPORT NO.number (system, machine name, release, version, machine, processor)
     TRAINING MODEL    : model
     TRAINING TIME     : time_cost
     TRAINING ACCURACY : accuracy
-    4. traning errors and test errors
-    5. confusion matrix
+    CONFUSION MATRIX  :
+        1    2    3    4    5    6
+    1   150  0    0    0    0    0
+    2   0    656  0    0    0    0
+    3   0    0    37   0    0    0
+    4   0    0    0   56    0    0
+    5   0    0    0    0 1004   30
+    6   0    0    0    0   24   34
+
+
+    figure report
+    1. traning errors
+    2. test errors
     """
     number = time.strftime('%y%m%d%H%M')
-    report_path = os.path.join('reports', model, 'report'+number+'.txt')
+    report_path = os.path.join('reports', model, 'report'+number,'report'+number)
+    os.makedirs(os.path.dirname(report_path))
     system_inform = platform.uname()
-    with open(report_path, 'w') as report:
+    with open(report_path+'.txt', 'w') as report:
         report.write('REPORT NO.{0} {1}\n'.format(number, system_inform))
         report.write('TRAINING MODEL    : {0}\n'.format(model))
+        report.write('TRAINING STEP     : {0}\n'.format(step))
         report.write('TRAINING TIME     : {0:.3f} sec\n'.format(time_cost))
-        report.write('TRAINING ACCURACY : {0:.3f}%\n')
+        report.write('TRAINING ACCURACY : {0:.3f}%\n'.format(accuracy))
+        report.write('CONFUSION MATRIX  : \n')
+        report.write('\t')
+        for i in range(len(confusion_matrix)):
+            report.write('{0}\t'.format(i+1))
+        report.write('\n')
+        for i in range(len(confusion_matrix)):
+            report.write('{0}\t'.format(i+1))
+            for j in range(len(confusion_matrix[i])):
+                report.write('{0}\t'.format(confusion_matrix[i,j]))
+            report.write('\n')
+#    plt.Figure(figsize=(3200/500, 1720/150), dpi=150)
+    plt.plot(train_errors)
+    plt.plot(test_errors)
+    plt.legend(['train error','test error'], fontsize='small')
+    plt.title('Error Curve')
+    plt.savefig(report_path+'.png', dpi=450, bbox_inches='tight', pad_inches=0)
+    plt.clf()
     
     
 #read real data
@@ -140,10 +171,10 @@ data_close_TP_pairs = list(np.loadtxt('ECG_learning_Data_close_TP_pairs.txt', de
 data_lawP = list(np.loadtxt('ECG_learning_Data_lawP.txt', delimiter=','))
 #data_noise = list(np.loadtxt('ECG_learning_Data_noise.txt', delimiter=','))
 
-#train_data, test_data = random_mix(150, data_normal, data_STEMI, data_combined,
-#                                   data_AF, data_close_TP_pairs, data_lawP)
 train_data, test_data = random_mix(150, data_normal, data_STEMI, data_combined,
-                                   data_AF)
+                                   data_AF, data_close_TP_pairs, data_lawP)
+#train_data, test_data = random_mix(150, data_normal, data_STEMI, data_combined,
+#                                   data_AF)
 
 #train_data = np.array(data_normal[:150] + data_STEMI[:37])
 #test_data = np.array(data_normal[150:] + data_STEMI[37:])
@@ -175,6 +206,12 @@ for i in range(len(y_testdata)):
 #noise = np.random.normal(0, 0.05, x_data.shape)
 #y_data = np.square(x_data) - 0.5 + noise
 
+#set maximun step
+maximun_step = 1000 
+
+#start time
+start_time = time.time()
+
 # define placeholder for inputs to network
 with tf.name_scope('Input') as scope:
     xs = tf.placeholder(tf.float32, [None, 800], name='X_input')
@@ -203,8 +240,10 @@ writer = tf.train.SummaryWriter('logs/', sess.graph)
 sess.run(init)
 
 train_errors = []
-accuracys = []
-for i in range(1000):
+test_errors = []
+#accuracys = []
+step = 0
+for i in range(maximun_step):
     # training
 #    batch_xs = x_traindata
 #    batch_ys = y_train_data
@@ -214,15 +253,22 @@ for i in range(1000):
 #        result = sess.run(merged, feed_dict={xs:batch_xs,ys:batch_ys})
 #        writer.add_summary(result, i)
         train_error = sess.run(cross_entropy, feed_dict={xs:batch_xs,ys:batch_ys})
+        test_error = sess.run(cross_entropy, feed_dict={xs:x_testdata,ys:y_testdata})
         accuracy = compute_accuracy(x_testdata, y_testdata)
         train_errors.append(train_error)
-        accuracys.append(accuracy)
+        test_errors.append(test_error)
+#        accuracys.append(accuracy)
         print('step {0}\naccuracy : {1:.3f}%'.format(i+1,accuracy*100))
         print('cross_entropy : {0}'.format(accuracy))
+        step = i+1
     #        print(sess.run(prediction, feed_dict={xs:batch_xs}))
         if accuracy==1:
+            step = i+1
             break
+    
+time_cost = time.time()-start_time
 confusion_matrix = confusion_matrix(x_testdata, y_testdata)
+submit_report('Basic_Classfication', time_cost, step, accuracy*100, train_errors, test_errors, confusion_matrix)
 print confusion_matrix
 print('Mission complete')
 sess.close()
