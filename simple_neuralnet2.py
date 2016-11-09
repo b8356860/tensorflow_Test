@@ -35,10 +35,9 @@ def compute_accuracy(v_xs, v_ys):
     global prediction
     y_pre = sess.run(prediction, feed_dict={xs: v_xs})
     correct_prediction = tf.equal(tf.argmax(y_pre,1), tf.argmax(v_ys,1))
-    fail_index = np.where(correct_prediction==0)
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     result = sess.run(accuracy, feed_dict={xs: v_xs, ys: v_ys})
-    return result, fail_index
+    return result
 
 
 def confusion_matrix(v_xs, v_ys):
@@ -172,37 +171,36 @@ data_STEMI = list(np.loadtxt('ECG_learning_Data_STEMI.txt', delimiter=','))
 data_AF = list(np.loadtxt('ECG_learning_Data_AF.txt', delimiter=','))
 data_close_TP_pairs = list(np.loadtxt('ECG_learning_Data_close_TP_pairs.txt', delimiter=','))
 data_lawP = list(np.loadtxt('ECG_learning_Data_lawP.txt', delimiter=','))
-#data_noise = list(np.loadtxt('ECG_learning_Data_noise.txt', delimiter=','))
+data_noise = list(np.loadtxt('ECG_learning_Data_noise.txt', delimiter=','))
 
 train_data_len = 150
 
-train_data, test_data = random_mix(train_data_len, data_normal, data_STEMI, data_combined,
-                                   data_AF, data_close_TP_pairs, data_lawP)
+#train_data, test_data = random_mix(train_data_len, data_normal, data_STEMI, data_combined,
+#                                   data_AF, data_close_TP_pairs, data_lawP)
 #train_data, test_data = random_mix(150, data_normal, data_STEMI, data_combined,
 #                                   data_AF)
 
 #train_data = np.array(data_normal[:150] + data_STEMI[:37])
 #test_data = np.array(data_normal[150:] + data_STEMI[37:])
-#train_data = np.array(data_STEMI[:37]  + data_STEMI[:37] + data_STEMI[:37] + 
-#        data_STEMI[:37] + data_normal[:150] + data_combined[:150] + data_AF[:50] + 
-#        data_AF[:50] + data_AF[:50] + data_close_TP_pairs[:150] + data_lawP[:50] + 
-#        data_lawP[:50] + data_lawP[:50])
+train_data = np.array(data_STEMI[:37] + data_normal[:150] + data_combined[:400]
+                 + data_AF[:56] + data_close_TP_pairs[:550] + data_lawP[:62])
 
-#test_data = np.array(data_STEMI[37:] + data_normal[150:] + data_combined[150:300])
+test_data = np.array(data_STEMI[37:] + data_normal[150:] + data_combined[400:]
+                    + data_AF[56:] + data_close_TP_pairs[550:] + data_lawP[62:])
 #train_data = np.array(data_STEMI[:37] + data_STEMI[:37] + data_STEMI[:37] + 
 #                        data_STEMI[:37] + data_normal[:150] + data_combined[:150])
 #test_data = np.array(data_STEMI[37:]+ data_normal[150:] + data_combined[150:] + 
 #                    data_close_TP_pairs[150:] + data_AF[50:] + data_lawP[50:])
 
 x_traindata = normalize(train_data[:,1:].astype('float32'))
-y_traindata = np.zeros([len(x_traindata),6]).astype('float32')
+y_traindata = np.zeros([len(x_traindata),7]).astype('float32')
 for i in range(len(y_traindata)):
     y_traindata[i,train_data[i,0].astype('int')-1] = 1
     
 x_traindata, y_traindata = random_batch(x_traindata, y_traindata, batch_num=500)
 
 x_testdata = normalize(test_data[:,1:].astype('float32'))
-y_testdata = np.zeros([len(x_testdata),6]).astype('float32')
+y_testdata = np.zeros([len(x_testdata),7]).astype('float32')
 for i in range(len(y_testdata)):
     y_testdata[i,test_data[i,0].astype('int')-1] = 1
 
@@ -220,13 +218,13 @@ start_time = time.time()
 # define placeholder for inputs to network
 with tf.name_scope('Input') as scope:
     xs = tf.placeholder(tf.float32, [None, 800], name='X_input')
-    ys = tf.placeholder(tf.float32, [None, 6], name= 'Y_input')
+    ys = tf.placeholder(tf.float32, [None, 7], name= 'Y_input')
 # add hidden layer
     
 #hidden_1 = add_layer('hidden1', xs, 800, 512, activation_function = tf.nn.softmax)
 #hidden_2 = add_layer('hidden2', hidden_1, 512, 128, activation_function = tf.nn.softmax)   
     
-prediction = add_layer('output', xs, 800, 6, activation_function = tf.nn.softmax)
+prediction = add_layer('output', xs, 800, 7, activation_function = tf.nn.softmax)
 
 # the error between prediciton and real data
 #loss = tf.reduce_mean(tf.reduce_sum(tf.square(ys - prediction),
@@ -259,7 +257,7 @@ for i in range(maximun_step):
 #        writer.add_summary(result, i)
     train_error = sess.run(cross_entropy, feed_dict={xs:batch_xs,ys:batch_ys})
     test_error = sess.run(cross_entropy, feed_dict={xs:x_testdata,ys:y_testdata})
-    accuracy, fail_index = compute_accuracy(x_testdata, y_testdata)
+    accuracy = compute_accuracy(x_testdata, y_testdata)
     train_errors.append(train_error)
     test_errors.append(test_error)
 #        accuracys.append(accuracy)
@@ -276,8 +274,6 @@ confusion_matrix = confusion_matrix(x_testdata, y_testdata)
 submit_report('Basic_Classfication', y_traindata, y_testdata, time_cost, step, accuracy*100, train_errors, test_errors, confusion_matrix)
 print confusion_matrix
 print('Mission complete')
-print('fail data :')
-plt.plot(x_testdata[fail_index])
 sess.close()
 
 
