@@ -287,10 +287,10 @@ prediction = add_layer('output', xs, 800, 8, activation_function = tf.nn.softmax
 #                     reduction_indices=[1]))
 with tf.name_scope('loss'):
     cross_entropy = -tf.reduce_mean(tf.reduce_sum(ys*tf.log(prediction), reduction_indices=[1]))
-#    cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(prediction, ys))
+    cross_entropy2 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(prediction, ys))
     tf.scalar_summary('cross_entropy', cross_entropy)
 with tf.name_scope('train'):
-    train_step = tf.train.GradientDescentOptimizer(train_step_length).minimize(cross_entropy)
+    train_step = tf.train.GradientDescentOptimizer(train_step_length).minimize(cross_entropy2)
 
 # important step
 init = tf.initialize_all_variables()
@@ -313,13 +313,15 @@ for i in range(maximun_epoch):
 #        result = sess.run(merged, feed_dict={xs:batch_xs,ys:batch_ys})
 #        writer.add_summary(result, i)
     train_error = sess.run(cross_entropy, feed_dict={xs:batch_xs,ys:batch_ys})
+    train_error2 = sess.run(cross_entropy2, feed_dict={xs:batch_xs,ys:batch_ys})
     test_error = sess.run(cross_entropy, feed_dict={xs:x_testdata,ys:y_testdata})
     accuracy = compute_accuracy(x_testdata, y_testdata)
     train_errors.append(train_error)
     test_errors.append(test_error)
 #        accuracys.append(accuracy)
     print('step {0}\naccuracy : {1:.3f}%'.format(i+1,accuracy*100))
-    print('cross_entropy : {0}'.format(test_error))
+    print('cross_entropy : {0}'.format(train_error))
+    print('cross_entropy2 : {0}'.format(train_error2))
     epoch = i+1
 #        print(sess.run(prediction, feed_dict={xs:batch_xs}))
     if test_error <= 0.05:
