@@ -1,63 +1,35 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Sep  8 01:37:04 2016
+Created on Sun Nov 20 16:40:35 2016
 
 @author: siang
 """
-import MyecgError
 import tensorflow as tf
 import numpy as np
-import sklearn.metrics as skm
-import os
+import MyecgError
 import time
 import platform
 import matplotlib.pyplot as plt
+import sklearn.metrics as skm
+import os
+
+def weight_varible(shape):
+    initial = tf.truncated_normal(shape, stddev=0.1)
+    return tf.Variable(initial)
 
 
-def add_layer(name, inputs, in_size, out_size, activation_function=None):
-    # add one more layer and return the output of this layer
-    with tf.name_scope(name):
-        with tf.name_scope('Weights'):
-            Weights = tf.Variable(tf.random_uniform([in_size, out_size]), name='W')
-            tf.histogram_summary(name + '/weights', Weights)
-        with tf.name_scope('Biases'):
-            biases = tf.Variable(tf.zeros([1, out_size]) + 0.1, name='B')
-            tf.histogram_summary(name + '/biases', biases)
-        with tf.name_scope('Wx_plus_B'):
-            Wx_plus_b = tf.matmul(inputs, Weights) + biases
-        if activation_function is None:
-            outputs = Wx_plus_b
-        else:
-            outputs = activation_function(Wx_plus_b)
-        tf.histogram_summary(name + '/outputs', outputs)
-        return outputs
+def bias_variable(shape):
+    initial = tf.constant(0.1, shape=shape)
+    return tf.Variable(initial)
 
 
-def compute_accuracy(v_xs, v_ys):
-    global prediction
-    y_pre = sess.run(prediction, feed_dict={xs: v_xs})
-    correct_prediction = tf.equal(tf.argmax(y_pre,1), tf.argmax(v_ys,1))
-    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    result = sess.run(accuracy, feed_dict={xs: v_xs, ys: v_ys})
-    return result
+def conv1d(x, W):
+    return tf.nn.conv1d(x, W, 1, 'SAME')
 
 
-def confusion_matrix(v_xs, v_ys):
-    global prediction
-    y_pre = sess.run(prediction, feed_dict={xs: v_xs})
-    result = tf.argmax(y_pre, 1)
-    true = tf.argmax(v_ys, 1)
-    y_result , y_true= sess.run([result,true], feed_dict={xs:v_xs, ys:v_ys})
-    failue_index = np.where((y_result!=y_true))
-    conf_matrix = skm.confusion_matrix(y_true, y_result)
-    return conf_matrix, failue_index
-
-
-def normalize(array):
-    arrmin = np.min(array)
-    array = array-arrmin
-    arrmax = np.max(array)
-    return array/arrmax
+def max_pool_2(x):
+    x = x[:,np.newaxis,:,:]
+    return tf.nn.max_pool(x, ksize=[1, 1, 2, 1], strides=[1, 1, 2, 1], padding='SAME')[:,0,:,:]
 
 
 def random_batch(example, label, batch_num=None):
@@ -122,6 +94,24 @@ def random_mix(amount, *args):
             remain_data.extend(list(data[sort_order[int(len(data)*amount):]]))
             
     return np.array(mixed_data), np.array(remain_data)
+
+
+def normalize(array):
+    arrmin = np.min(array)
+    array = array-arrmin
+    arrmax = np.max(array)
+    return array/arrmax
+
+
+def confusion_matrix(v_xs, v_ys, kp):
+    global y_conv
+    y_pre = sess.run(y_conv, feed_dict={x: x_testdata, keep_prob: kp})
+    result = tf.argmax(y_pre, 1)
+    true = tf.argmax(v_ys, 1)
+    y_result , y_true= sess.run([result,true], feed_dict={x:v_xs, y_:v_ys})
+    failue_index = np.where((y_result!=y_true))
+    conf_matrix = skm.confusion_matrix(y_true, y_result)
+    return conf_matrix, failue_index
 
 
 def submit_report(model, train_data, test_data, time_cost, epoch, step, 
@@ -192,15 +182,7 @@ def submit_report(model, train_data, test_data, time_cost, epoch, step,
             plt.title('classification failure signal')
             plt.savefig(os.path.join(fialue_folder, str(i)+'.png'), dpi=450, bbox_inches='tight', pad_inches=0)
             plt.clf()
-    plt.close('all')
-
-
-def add_noise(data):
-    for i in range(len(data)):
-        data[i,1:] + np.random.random(len(data[i])-1)
-    return data
-
-data_list = {'normal','artificial','STEMI','close_TP_pairs','close_TP_pairs','lawP'}    
+    plt.close('all')    
 #read real data
 data_normal = list(np.loadtxt('ECG_learning_Data_normal_3.txt', delimiter=','))
 data_VPC = list(np.loadtxt('ECG_learning_Data_VPC.txt', delimiter=','))
@@ -213,45 +195,19 @@ data_artificial = list(np.loadtxt('ECG_learning_Data_artificial.txt', delimiter=
 
 train_data_len = 1000
 train_data_proportion = 0.5
-train_step_length = 0.7
+train_step_length = 0.0001
 #set maximun step
-maximun_epoch = 30
+maximun_epoch = 300
 
 #set Test Model
-#Test_model = 'Basic_Classfication'
-#Test_model = 'Basic_Classfication_unbalanced'
-#Test_model = 'Basic_Classfication_balanced'
-#Test_model = 'Basic_Classfication_balanced1000'
-Test_model = 'Basic_Classfication_balanced_test_3layers1000'
+Test_model = 'CNN_Classfication'
 
-#add test data
-#data_artificial[-1][0]=1
-#data_lawP[-1][0] = 2
-#data_STEMI[-1][0] = 5
-#
-#data_artificial[0][0]=1
-#data_lawP[0][0] = 2
-#data_STEMI[0][0] = 5
 
-#train_data, test_data = random_mix(train_data_proportion, data_normal, data_STEMI, data_artificial,
-#                                   data_AF, data_close_TP_pairs, data_lawP,data_VPC)
-train_data, test_data = random_mix(train_data_len, data_normal, data_STEMI, data_artificial,
+train_data, test_data = random_mix(train_data_proportion, data_normal, data_STEMI, data_artificial,
                                    data_AF, data_close_TP_pairs, data_lawP,data_VPC)
+#train_data, test_data = random_mix(train_data_len, data_normal, data_STEMI, data_artificial,
+#                                   data_AF, data_close_TP_pairs, data_lawP,data_VPC)
 
-#train_data = np.array(data_normal[:150] + data_STEMI[:37])
-#test_data = np.array(data_normal[150:] + data_STEMI[37:])
-
-
-#train_data = np.array(data_STEMI[:37] + data_normal[:361] + data_artificial[:400]
-#                 + data_AF[:56] + data_close_TP_pairs[:550] + data_lawP[:62]+data_VPC[:25])
-#
-#test_data = np.array(data_STEMI[37:] + data_normal[361:] + data_artificial[400:]
-#                    + data_AF[56:] + data_close_TP_pairs[550:] + data_lawP[62:]+ data_VPC[:25])
-
-#train_data = np.array(data_STEMI[:37] + data_STEMI[:37] + data_STEMI[:37] + 
-#                        data_STEMI[:37] + data_normal[:150] + data_combined[:150])
-#test_data = np.array(data_STEMI[37:]+ data_normal[150:] + data_combined[150:] + 
-#                    data_close_TP_pairs[150:] + data_AF[50:] + data_lawP[50:])
 
 x_traindata = normalize(train_data[:,1:].astype('float32'))
 y_traindata = np.zeros([len(x_traindata),8]).astype('float32')
@@ -265,84 +221,100 @@ y_testdata = np.zeros([len(x_testdata),8]).astype('float32')
 for i in range(len(y_testdata)):
     y_testdata[i,test_data[i,0].astype('int')-1] = 1
 
-# Make up some real data
-#x_data = np.linspace(-1,1,300)[:, np.newaxis]
-#noise = np.random.normal(0, 0.05, x_data.shape)
-#y_data = np.square(x_data) - 0.5 + noise
 
-#start time
-start_time = time.time()
+sess = tf.InteractiveSession()
 
-# define placeholder for inputs to network
-with tf.name_scope('Input') as scope:
-    xs = tf.placeholder(tf.float32, [None, 800], name='X_input')
-    ys = tf.placeholder(tf.float32, [None, 8], name= 'Y_input')
-# add hidden layer
-    
-hidden_1 = add_layer('hidden1', xs, 800, 256, activation_function = tf.nn.softmax)
-hidden_2 = add_layer('hidden2', hidden_1, 256, 64, activation_function = None)   
-    
-prediction = add_layer('output', hidden_2, 64, 8, activation_function = tf.nn.softmax)
+#x_data = np.array(range(28))[np.newaxis, : ]
 
-# the error between prediciton and real data
-#loss = tf.reduce_mean(tf.reduce_sum(tf.square(ys - prediction),
-#                     reduction_indices=[1]))
-with tf.name_scope('loss'):
-    cross_entropy = -tf.reduce_mean(tf.reduce_sum(ys*tf.log(prediction), reduction_indices=[1]))
-    cross_entropy2 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(prediction, ys))
-    tf.scalar_summary('cross_entropy', cross_entropy)
-with tf.name_scope('train'):
-    train_step = tf.train.GradientDescentOptimizer(train_step_length).minimize(cross_entropy2)
+x = tf.placeholder(tf.float32, [None, 800])
+x_input = tf.reshape(x, [-1, 800, 1])
 
-# important step
-init = tf.initialize_all_variables()
-sess = tf.Session()
-#merged = tf.merge_all_summaries()
-#writer = tf.train.SummaryWriter('logs/', sess.graph)
-sess.run(init)
+# conv layer 1
+w_conv1 = weight_varible([25,1,32])
+b_conv1 = bias_variable([32])
+
+h_conv1 = tf.nn.relu(conv1d(x_input, w_conv1) + b_conv1)
+h_pool1 = max_pool_2(h_conv1)
+
+# conv layer 2
+w_conv2 = weight_varible([25,32,64])
+b_conv2 = bias_variable([64])
+
+h_conv2 = tf.nn.relu(conv1d(h_pool1, w_conv2) + b_conv2)
+h_pool2 = max_pool_2(h_conv2)
+
+# full connection
+W_fc1 = weight_varible([200 * 64, 256])
+b_fc1 = bias_variable([256])
+
+h_pool2_flat = tf.reshape(h_pool2, [-1, 200 * 64])
+h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
+
+# dropout
+keep_prob = tf.placeholder(tf.float32)
+h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
+
+## output layer: softmax
+W_fc2 = weight_varible([256, 8])
+b_fc2 = bias_variable([8])
+
+y_conv = tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
+y_ = tf.placeholder(tf.float32, [None, 8])
+
+# model training
+cross_entropy = -tf.reduce_sum(y_ * tf.log(y_conv))
+train_step = tf.train.AdamOptimizer(train_step_length).minimize(cross_entropy)
+
+correct_prediction = tf.equal(tf.arg_max(y_conv, 1), tf.arg_max(y_, 1))
+accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+
+sess.run(tf.initialize_all_variables())
+
 
 train_errors = []
 test_errors = []
-#accuracys = []
-step = 0
+
+start_time = time.time()
 for i in range(maximun_epoch):
-    # training
-#    batch_xs = x_traindata
-#    batch_ys = y_train_data
     batch_xs, batch_ys = random_batch(x_traindata, y_traindata, batch_num=100)
-    sess.run(train_step, feed_dict={xs:batch_xs,ys:batch_ys})
-#    if (i+1) % 10 == 0:
-#        result = sess.run(merged, feed_dict={xs:batch_xs,ys:batch_ys})
-#        writer.add_summary(result, i)
-    train_error = sess.run(cross_entropy, feed_dict={xs:batch_xs,ys:batch_ys})
-    train_error2 = sess.run(cross_entropy2, feed_dict={xs:batch_xs,ys:batch_ys})
-    test_error = sess.run(cross_entropy, feed_dict={xs:x_testdata,ys:y_testdata})
-    accuracy = compute_accuracy(x_testdata, y_testdata)
-    train_errors.append(train_error)
-    test_errors.append(test_error)
-#        accuracys.append(accuracy)
-    print('step {0}\naccuracy : {1:.3f}%'.format(i+1,accuracy*100))
-    print('cross_entropy : {0}'.format(train_error))
-    print('cross_entropy2 : {0}'.format(train_error2))
+
+    if i % 100 == 0:
+        # imformation on test   
+        train_accuracy = accuracy.eval(feed_dict={x: batch_xs, y_: batch_ys, keep_prob: 1.0})
+        train_error = sess.run(cross_entropy, feed_dict={x:batch_xs, y_:batch_ys, keep_prob: 1.0})
+        test_error = sess.run(cross_entropy, feed_dict={x:x_testdata,y_:y_testdata, keep_prob: 1.0})
+        train_accuracy = accuracy.eval(feed_dict={x: x_testdata, y_: y_testdata, keep_prob: 1.0})
+        train_errors.append(train_error)
+        test_errors.append(test_error)
+        print("step %d, training accuracy %g"%(i, train_accuracy))
+        print('cross_entropy : {0}'.format(train_error))
+        
+        
+    train_step.run(feed_dict = {x: batch_xs, y_: batch_ys, keep_prob: 0.5})
+    
+ 
+    
     epoch = i+1
 #        print(sess.run(prediction, feed_dict={xs:batch_xs}))
-    if test_error <= 0.05:
-        epoch = i+1
-        break
-    if accuracy == 1:
-        epoch = i+1
-        break       
-    
+#    if test_error <= 0.05:
+#        epoch = i+1
+#        break
+#    if train_accuracy == 1:
+#        epoch = i+1
+#        break      
 time_cost = time.time()-start_time
-confusion_matrix, failue_index = confusion_matrix(x_testdata, y_testdata)
+test_accuracy = accuracy.eval(feed_dict={x: x_testdata, y_: y_testdata, keep_prob: 1.0})
+confusion_matrix, failue_index = confusion_matrix(x_testdata, y_testdata, 1.0)
 submit_report(Test_model, y_traindata, y_testdata, time_cost, epoch, 
-              train_step_length, accuracy*100, train_errors, test_errors, 
+              train_step_length, test_accuracy*100, train_errors, test_errors, 
               confusion_matrix, x_testdata[failue_index])
+
+# accuacy on test
+print("test accuracy %g"%(test_accuracy))
 print confusion_matrix
 print('Mission complete')
 sess.close()
 
 
-#if __name__=='__main__':
-#    for i in range(10):
-#    main()
+#a = sess.run(y_conv, feed_dict={x:x_traindata, keep_prob: 1.0})
+#b = sess.run(h_fc1, feed_dict={x:x_traindata})
