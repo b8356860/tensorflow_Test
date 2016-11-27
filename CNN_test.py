@@ -204,7 +204,7 @@ Test_model = 'CNN_Classfication'
 
 
 train_data, test_data = random_mix(train_data_proportion, data_normal, data_STEMI, data_artificial,
-                                   data_AF, data_close_TP_pairs, data_lawP,data_VPC)
+                                   data_AF, data_close_TP_pairs, data_lawP)
 #train_data, test_data = random_mix(train_data_len, data_normal, data_STEMI, data_artificial,
 #                                   data_AF, data_close_TP_pairs, data_lawP,data_VPC)
 
@@ -277,15 +277,14 @@ test_errors = []
 start_time = time.time()
 for i in range(maximun_epoch):
     batch_xs, batch_ys = random_batch(x_traindata, y_traindata, batch_num=100)
-
+    train_error = sess.run(cross_entropy, feed_dict={x:batch_xs, y_:batch_ys, keep_prob: 1.0})
+    test_error = sess.run(cross_entropy, feed_dict={x:x_testdata,y_:y_testdata, keep_prob: 1.0})
+    train_errors.append(train_error)
+    test_errors.append(test_error)
     if i % 100 == 0:
         # imformation on test   
         train_accuracy = accuracy.eval(feed_dict={x: batch_xs, y_: batch_ys, keep_prob: 1.0})
-        train_error = sess.run(cross_entropy, feed_dict={x:batch_xs, y_:batch_ys, keep_prob: 1.0})
-        test_error = sess.run(cross_entropy, feed_dict={x:x_testdata,y_:y_testdata, keep_prob: 1.0})
         train_accuracy = accuracy.eval(feed_dict={x: x_testdata, y_: y_testdata, keep_prob: 1.0})
-        train_errors.append(train_error)
-        test_errors.append(test_error)
         print("step %d, training accuracy %g"%(i, train_accuracy))
         print('cross_entropy : {0}'.format(train_error))
         

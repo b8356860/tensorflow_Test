@@ -68,13 +68,17 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 sess.run(tf.initialize_all_variables())
 
-for i in range(20000):
-    batch = mnist.train.next_batch(50)
+batch = mnist.train.next_batch(50)
+a = sess.run(keep_prob, feed_dict={x:batch[0],keep_prob: 1.0})
+b = sess.run(h_fc1_drop, feed_dict={x:batch[0],keep_prob: 1.0})
 
-    if i % 100 == 0:
-        train_accuacy = accuracy.eval(feed_dict={x: batch[0], y_: batch[1], keep_prob: 1.0})
-        print("step %d, training accuracy %g"%(i, train_accuacy))
-    train_step.run(feed_dict = {x: batch[0], y_: batch[1], keep_prob: 0.5})
+#for i in range(20000):
+#    batch = mnist.train.next_batch(50)
+
+#    if i % 100 == 0:
+#        train_accuacy = accuracy.eval(feed_dict={x: batch[0], y_: batch[1], keep_prob: 1.0})
+#        print("step %d, training accuracy %g"%(i, train_accuacy))
+#    train_step.run(feed_dict = {x: batch[0], y_: batch[1], keep_prob: 0.5})
 
 # accuacy on test
-print("test accuracy %g"%(accuracy.eval(feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0})))
+#print("test accuracy %g"%(accuracy.eval(feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0})))
