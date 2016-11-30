@@ -11,7 +11,7 @@ import sklearn.metrics as skm
 import os
 import time
 import platform
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 
 def add_layer(name, inputs, in_size, out_size, activation_function=None):
@@ -176,23 +176,23 @@ def submit_report(model, train_data, test_data, time_cost, epoch, step,
             for j in range(len(confusion_matrix[i])):
                 report.write('{0}\t'.format(confusion_matrix[i,j]))
             report.write('\n')
-    plt.plot(train_errors)
-    plt.plot(test_errors)
-    plt.legend(['train error','test error'], fontsize='small')
-    plt.title('Error Curve')
-    plt.savefig(report_path+'.png', dpi=450, bbox_inches='tight', pad_inches=0)
-    plt.clf()
-    
-    if failure_number!=0 and failure_number<=50:
-        fialue_folder = os.path.join(os.path.dirname(report_path), 'failure_data')
-        os.makedirs(fialue_folder)
-        for i in range(failure_number):
-            plt.plot(failure_areas[i])
-            plt.legend(['Signal'], fontsize='small')
-            plt.title('classification failure signal')
-            plt.savefig(os.path.join(fialue_folder, str(i)+'.png'), dpi=450, bbox_inches='tight', pad_inches=0)
-            plt.clf()
-    plt.close('all')
+#    plt.plot(train_errors)
+#    plt.plot(test_errors)
+#    plt.legend(['train error','test error'], fontsize='small')
+#    plt.title('Error Curve')
+#    plt.savefig(report_path+'.png', dpi=450, bbox_inches='tight', pad_inches=0)
+#    plt.clf()
+#    
+#    if failure_number!=0 and failure_number<=50:
+#        fialue_folder = os.path.join(os.path.dirname(report_path), 'failure_data')
+#        os.makedirs(fialue_folder)
+#        for i in range(failure_number):
+#            plt.plot(failure_areas[i])
+#            plt.legend(['Signal'], fontsize='small')
+#            plt.title('classification failure signal')
+#            plt.savefig(os.path.join(fialue_folder, str(i)+'.png'), dpi=450, bbox_inches='tight', pad_inches=0)
+#            plt.clf()
+#    plt.close('all')
 
 
 def add_noise(data):
@@ -215,14 +215,14 @@ train_data_len = 1000
 train_data_proportion = 0.5
 train_step_length = 0.7
 #set maximun step
-maximun_epoch = 30
+maximun_epoch = 300
 
 #set Test Model
 #Test_model = 'Basic_Classfication'
-#Test_model = 'Basic_Classfication_unbalanced'
+Test_model = 'Basic_Classfication_unbalanced'
 #Test_model = 'Basic_Classfication_balanced'
 #Test_model = 'Basic_Classfication_balanced1000'
-Test_model = 'Basic_Classfication_balanced_test_3layers1000'
+#Test_model = 'Basic_Classfication_balanced_test_3layers1000'
 
 #add test data
 #data_artificial[-1][0]=1
@@ -233,10 +233,10 @@ Test_model = 'Basic_Classfication_balanced_test_3layers1000'
 #data_lawP[0][0] = 2
 #data_STEMI[0][0] = 5
 
-#train_data, test_data = random_mix(train_data_proportion, data_normal, data_STEMI, data_artificial,
-#                                   data_AF, data_close_TP_pairs, data_lawP,data_VPC)
-train_data, test_data = random_mix(train_data_len, data_normal, data_STEMI, data_artificial,
+train_data, test_data = random_mix(train_data_proportion, data_normal, data_STEMI, data_artificial,
                                    data_AF, data_close_TP_pairs, data_lawP,data_VPC)
+#train_data, test_data = random_mix(train_data_len, data_normal, data_STEMI, data_artificial,
+#                                   data_AF, data_close_TP_pairs, data_lawP,data_VPC)
 
 #train_data = np.array(data_normal[:150] + data_STEMI[:37])
 #test_data = np.array(data_normal[150:] + data_STEMI[37:])
@@ -326,12 +326,12 @@ for i in range(maximun_epoch):
     print('cross_entropy2 : {0}'.format(train_error2))
     epoch = i+1
 #        print(sess.run(prediction, feed_dict={xs:batch_xs}))
-    if test_error <= 0.05:
-        epoch = i+1
-        break
-    if accuracy == 1:
-        epoch = i+1
-        break       
+#    if test_error <= 0.05:
+#        epoch = i+1
+#        break
+#    if accuracy == 1:
+#        epoch = i+1
+#        break       
     
 time_cost = time.time()-start_time
 confusion_matrix, failue_index = confusion_matrix(x_testdata, y_testdata)

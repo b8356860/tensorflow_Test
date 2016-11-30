@@ -9,7 +9,7 @@ import numpy as np
 import MyecgError
 import time
 import platform
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import sklearn.metrics as skm
 import os
 
@@ -166,23 +166,23 @@ def submit_report(model, train_data, test_data, time_cost, epoch, step,
             for j in range(len(confusion_matrix[i])):
                 report.write('{0}\t'.format(confusion_matrix[i,j]))
             report.write('\n')
-    plt.plot(train_errors)
-    plt.plot(test_errors)
-    plt.legend(['train error','test error'], fontsize='small')
-    plt.title('Error Curve')
-    plt.savefig(report_path+'.png', dpi=450, bbox_inches='tight', pad_inches=0)
-    plt.clf()
+#    plt.plot(train_errors)
+#    plt.plot(test_errors)
+#    plt.legend(['train error','test error'], fontsize='small')
+#    plt.title('Error Curve')
+#    plt.savefig(report_path+'.png', dpi=450, bbox_inches='tight', pad_inches=0)
+#    plt.clf()
     
-    if failure_number!=0 and failure_number<=50:
-        fialue_folder = os.path.join(os.path.dirname(report_path), 'failure_data')
-        os.makedirs(fialue_folder)
-        for i in range(failure_number):
-            plt.plot(failure_areas[i])
-            plt.legend(['Signal'], fontsize='small')
-            plt.title('classification failure signal')
-            plt.savefig(os.path.join(fialue_folder, str(i)+'.png'), dpi=450, bbox_inches='tight', pad_inches=0)
-            plt.clf()
-    plt.close('all')    
+#    if failure_number!=0 and failure_number<=50:
+#        fialue_folder = os.path.join(os.path.dirname(report_path), 'failure_data')
+#        os.makedirs(fialue_folder)
+#        for i in range(failure_number):
+#            plt.plot(failure_areas[i])
+#            plt.legend(['Signal'], fontsize='small')
+#            plt.title('classification failure signal')
+#            plt.savefig(os.path.join(fialue_folder, str(i)+'.png'), dpi=450, bbox_inches='tight', pad_inches=0)
+#            plt.clf()
+#    plt.close('all')    
 #read real data
 data_normal = list(np.loadtxt('ECG_learning_Data_normal_3.txt', delimiter=','))
 data_VPC = list(np.loadtxt('ECG_learning_Data_VPC.txt', delimiter=','))
@@ -204,7 +204,7 @@ Test_model = 'CNN_Classfication'
 
 
 train_data, test_data = random_mix(train_data_proportion, data_normal, data_STEMI, data_artificial,
-                                   data_AF, data_close_TP_pairs, data_lawP)
+                                   data_AF, data_close_TP_pairs, data_lawP, data_VPC)
 #train_data, test_data = random_mix(train_data_len, data_normal, data_STEMI, data_artificial,
 #                                   data_AF, data_close_TP_pairs, data_lawP,data_VPC)
 
@@ -281,11 +281,11 @@ for i in range(maximun_epoch):
     test_error = sess.run(cross_entropy, feed_dict={x:x_testdata,y_:y_testdata, keep_prob: 1.0})
     train_errors.append(train_error)
     test_errors.append(test_error)
-    if i % 100 == 0:
+    if (i+1) % 100 == 0 or i==0:
         # imformation on test   
         train_accuracy = accuracy.eval(feed_dict={x: batch_xs, y_: batch_ys, keep_prob: 1.0})
         train_accuracy = accuracy.eval(feed_dict={x: x_testdata, y_: y_testdata, keep_prob: 1.0})
-        print("step %d, training accuracy %g"%(i, train_accuracy))
+        print("step {0:.3f}, training accuracy {1:.3f} %".format(i+1, train_accuracy))
         print('cross_entropy : {0}'.format(train_error))
         
         
@@ -309,7 +309,7 @@ submit_report(Test_model, y_traindata, y_testdata, time_cost, epoch,
               confusion_matrix, x_testdata[failue_index])
 
 # accuacy on test
-print("test accuracy %g"%(test_accuracy))
+print("test accuracy {0:.3f} %".format(test_accuracy))
 print confusion_matrix
 print('Mission complete')
 sess.close()
