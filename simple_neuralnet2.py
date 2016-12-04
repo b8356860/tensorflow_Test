@@ -195,9 +195,9 @@ def submit_report(model, train_data, test_data, time_cost, epoch, step,
 #    plt.close('all')
 
 
-def add_noise(data):
+def add_whitenoise(data, mean=0, std=1):
     for i in range(len(data)):
-        data[i,1:] + np.random.random(len(data[i])-1)
+        data[i,1:] + np.random.normal(mean,std,len(data[i])-1)
     return data
 
 data_list = {'normal','artificial','STEMI','close_TP_pairs','close_TP_pairs','lawP'}    
@@ -233,25 +233,13 @@ Test_model = 'Basic_Classfication_unbalanced'
 #data_lawP[0][0] = 2
 #data_STEMI[0][0] = 5
 
+#
 train_data, test_data = random_mix(train_data_proportion, data_normal, data_STEMI, data_artificial,
                                    data_AF, data_close_TP_pairs, data_lawP,data_VPC)
 #train_data, test_data = random_mix(train_data_len, data_normal, data_STEMI, data_artificial,
 #                                   data_AF, data_close_TP_pairs, data_lawP,data_VPC)
 
-#train_data = np.array(data_normal[:150] + data_STEMI[:37])
-#test_data = np.array(data_normal[150:] + data_STEMI[37:])
 
-
-#train_data = np.array(data_STEMI[:37] + data_normal[:361] + data_artificial[:400]
-#                 + data_AF[:56] + data_close_TP_pairs[:550] + data_lawP[:62]+data_VPC[:25])
-#
-#test_data = np.array(data_STEMI[37:] + data_normal[361:] + data_artificial[400:]
-#                    + data_AF[56:] + data_close_TP_pairs[550:] + data_lawP[62:]+ data_VPC[:25])
-
-#train_data = np.array(data_STEMI[:37] + data_STEMI[:37] + data_STEMI[:37] + 
-#                        data_STEMI[:37] + data_normal[:150] + data_combined[:150])
-#test_data = np.array(data_STEMI[37:]+ data_normal[150:] + data_combined[150:] + 
-#                    data_close_TP_pairs[150:] + data_AF[50:] + data_lawP[50:])
 
 x_traindata = normalize(train_data[:,1:].astype('float32'))
 y_traindata = np.zeros([len(x_traindata),8]).astype('float32')
@@ -338,6 +326,7 @@ confusion_matrix, failue_index = confusion_matrix(x_testdata, y_testdata)
 submit_report(Test_model, y_traindata, y_testdata, time_cost, epoch, 
               train_step_length, accuracy*100, train_errors, test_errors, 
               confusion_matrix, x_testdata[failue_index])
+
 print confusion_matrix
 print('Mission complete')
 sess.close()

@@ -197,7 +197,7 @@ train_data_len = 1000
 train_data_proportion = 0.5
 train_step_length = 0.0001
 #set maximun step
-maximun_epoch = 300
+maximun_epoch = 500
 
 #set Test Model
 Test_model = 'CNN_Classfication'
@@ -305,11 +305,17 @@ time_cost = time.time()-start_time
 test_accuracy = accuracy.eval(feed_dict={x: x_testdata, y_: y_testdata, keep_prob: 1.0})
 confusion_matrix, failue_index = confusion_matrix(x_testdata, y_testdata, 1.0)
 submit_report(Test_model, y_traindata, y_testdata, time_cost, epoch, 
-              train_step_length, test_accuracy*100, train_errors, test_errors, 
+              train_step_length, test_accuracy, train_errors, test_errors, 
               confusion_matrix, x_testdata[failue_index])
 
 # accuacy on test
-print("test accuracy {0:.3f} %".format(test_accuracy))
+print("final report :\n")
+print('TRAINING MODEL    : {0}'.format(Test_model))
+print('TRAINING STEP     : {0}'.format(train_step_length))        
+print('TRAINING EPOCH    : {0}'.format(epoch))
+print('TRAINING TIME     : {0:.3f} sec'.format(time_cost))
+print('TEST ACCURACY     : {0:.3f}%'.format(test_accuracy))
+print('CONFUSION MATRIX  : ')
 print confusion_matrix
 print('Mission complete')
 sess.close()
