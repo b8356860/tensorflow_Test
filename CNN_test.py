@@ -197,7 +197,7 @@ train_data_len = 1000
 train_data_proportion = 0.5
 train_step_length = 0.0001
 #set maximun step
-maximun_epoch = 500
+maximun_epoch = 2000
 
 #set Test Model
 Test_model = 'CNN_Classfication'
