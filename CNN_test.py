@@ -311,7 +311,7 @@ submit_report(Test_model, y_traindata, y_testdata, time_cost, epoch,
 print("final report :\n")
 print('TRAINING MODEL    : {0}'.format(Test_model))
 print('TRAINING STEP     : {0}'.format(train_step_length))        
-print('TRAINING EPOCH    : {0}'.format(epoch))
+print('TRAINING EPOCH    : {0:d}'.format(epoch))
 print('TRAINING TIME     : {0:.3f} sec'.format(time_cost))
 print('TEST ACCURACY     : {0:.3f}%'.format(test_accuracy*100))
 print('CONFUSION MATRIX  : ')
