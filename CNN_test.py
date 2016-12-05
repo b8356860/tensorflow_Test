@@ -13,6 +13,7 @@ import platform
 import sklearn.metrics as skm
 import os
 
+
 def weight_varible(shape):
     initial = tf.truncated_normal(shape, stddev=0.1)
     return tf.Variable(initial)
@@ -166,6 +167,12 @@ def submit_report(model, train_data, test_data, time_cost, epoch, step,
             for j in range(len(confusion_matrix[i])):
                 report.write('{0}\t'.format(confusion_matrix[i,j]))
             report.write('\n')
+
+
+def add_whitenoise(data, mean=0, std=1):
+    for i in range(len(data)):
+        data[i,1:] + np.random.normal(mean,std,len(data[i])-1)
+    return data
 #    plt.plot(train_errors)
 #    plt.plot(test_errors)
 #    plt.legend(['train error','test error'], fontsize='small')
@@ -197,18 +204,20 @@ train_data_len = 1000
 train_data_proportion = 0.5
 train_step_length = 0.0001
 #set maximun step
-maximun_epoch = 2000
+maximun_epoch = 3000
 
 #set Test Model
 Test_model = 'CNN_Classfication'
 
 
 train_data, test_data = random_mix(train_data_proportion, data_normal, data_STEMI, data_artificial,
-                                   data_AF, data_close_TP_pairs, data_lawP, data_VPC)
+                                   data_AF, data_close_TP_pairs, data_lawP)
 #train_data, test_data = random_mix(train_data_len, data_normal, data_STEMI, data_artificial,
 #                                   data_AF, data_close_TP_pairs, data_lawP,data_VPC)
+#add noise to training data
+train_data = add_whitenoise(train_data)
 
-
+#split x data and y data
 x_traindata = normalize(train_data[:,1:].astype('float32'))
 y_traindata = np.zeros([len(x_traindata),8]).astype('float32')
 for i in range(len(y_traindata)):
@@ -221,7 +230,7 @@ y_testdata = np.zeros([len(x_testdata),8]).astype('float32')
 for i in range(len(y_testdata)):
     y_testdata[i,test_data[i,0].astype('int')-1] = 1
 
-
+#create graph
 sess = tf.InteractiveSession()
 
 #x_data = np.array(range(28))[np.newaxis, : ]
@@ -270,22 +279,20 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 sess.run(tf.initialize_all_variables())
 
-
 train_errors = []
 test_errors = []
-
 start_time = time.time()
 for i in range(maximun_epoch):
     batch_xs, batch_ys = random_batch(x_traindata, y_traindata, batch_num=100)
     train_error = sess.run(cross_entropy, feed_dict={x:batch_xs, y_:batch_ys, keep_prob: 1.0})
-    test_error = sess.run(cross_entropy, feed_dict={x:x_testdata,y_:y_testdata, keep_prob: 1.0})
-    train_errors.append(train_error)
-    test_errors.append(test_error)
+#    test_error = sess.run(cross_entropy, feed_dict={x:x_testdata,y_:y_testdata, keep_prob: 1.0})
+#    train_errors.append(train_error)
+#    test_errors.append(test_error)
     if (i+1) % 100 == 0 or i==0:
         # imformation on test   
         train_accuracy = accuracy.eval(feed_dict={x: batch_xs, y_: batch_ys, keep_prob: 1.0})
         print("step {0:.3f}, training accuracy {1:.3f} %".format(i+1, train_accuracy))
-        print('cross_entropy : {0}'.format(train_error))
+        print('cross_entropy : {0}\n'.format(train_error))
         
         
     train_step.run(feed_dict = {x: batch_xs, y_: batch_ys, keep_prob: 0.5})
@@ -307,8 +314,8 @@ submit_report(Test_model, y_traindata, y_testdata, time_cost, epoch,
               train_step_length, test_accuracy, train_errors, test_errors, 
               confusion_matrix, x_testdata[failue_index])
 
-# accuacy on test
-print("final report :\n")
+# report in this test
+print("final report :")
 print('TRAINING MODEL    : {0}'.format(Test_model))
 print('TRAINING STEP     : {0}'.format(train_step_length))        
 print('TRAINING EPOCH    : {0:d}'.format(epoch))
@@ -318,7 +325,3 @@ print('CONFUSION MATRIX  : ')
 print confusion_matrix
 print('Mission complete')
 sess.close()
-
-
-#a = sess.run(y_conv, feed_dict={x:x_traindata, keep_prob: 1.0})
-#b = sess.run(h_fc1, feed_dict={x:x_traindata})
