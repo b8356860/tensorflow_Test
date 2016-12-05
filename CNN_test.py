@@ -291,7 +291,7 @@ for i in range(maximun_epoch):
     if (i+1) % 100 == 0 or i==0:
         # imformation on test   
         train_accuracy = accuracy.eval(feed_dict={x: batch_xs, y_: batch_ys, keep_prob: 1.0})
-        print("step {0:.3f}, training accuracy {1:.3f} %".format(i+1, train_accuracy))
+        print("step {0:.3f}, training accuracy {1:.3f} %".format(i+1, train_accuracy*100))
         print('cross_entropy : {0}\n'.format(train_error))
         
         
