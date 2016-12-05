@@ -209,7 +209,7 @@ Test_model = 'CNN_Classfication'
 
 
 train_data, test_data = random_mix(train_data_proportion, data_normal, data_STEMI, data_artificial,
-                                   data_AF, data_close_TP_pairs, data_lawP)
+                                   data_AF, data_close_TP_pairs, data_lawP, data_VPC)
 #train_data, test_data = random_mix(train_data_len, data_normal, data_STEMI, data_artificial,
 #                                   data_AF, data_close_TP_pairs, data_lawP,data_VPC)
 #add noise to training data
