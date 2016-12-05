@@ -9,7 +9,7 @@ import numpy as np
 import MyecgError
 import time
 import platform
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import sklearn.metrics as skm
 import os
 
@@ -167,29 +167,27 @@ def submit_report(model, train_data, test_data, time_cost, epoch, step,
             for j in range(len(confusion_matrix[i])):
                 report.write('{0}\t'.format(confusion_matrix[i,j]))
             report.write('\n')
-
-
+    plt.plot(train_errors)
+    plt.plot(test_errors)
+    plt.legend(['train error','test error'], fontsize='small')
+    plt.title('Error Curve')
+    plt.savefig(report_path+'.png', dpi=450, bbox_inches='tight', pad_inches=0)
+    plt.clf()
+    
+    if failure_number!=0 and failure_number<=50:
+        fialue_folder = os.path.join(os.path.dirname(report_path), 'failure_data')
+        os.makedirs(fialue_folder)
+        for i in range(failure_number):
+            plt.plot(failure_areas[i])
+            plt.legend(['Signal'], fontsize='small')
+            plt.title('classification failure signal')
+            plt.savefig(os.path.join(fialue_folder, str(i)+'.png'), dpi=450, bbox_inches='tight', pad_inches=0)
+            plt.clf()
+    plt.close('all')  
 def add_whitenoise(data, mean=0, std=1):
     for i in range(len(data)):
         data[i,1:] + np.random.normal(mean,std,len(data[i])-1)
-    return data
-#    plt.plot(train_errors)
-#    plt.plot(test_errors)
-#    plt.legend(['train error','test error'], fontsize='small')
-#    plt.title('Error Curve')
-#    plt.savefig(report_path+'.png', dpi=450, bbox_inches='tight', pad_inches=0)
-#    plt.clf()
-    
-#    if failure_number!=0 and failure_number<=50:
-#        fialue_folder = os.path.join(os.path.dirname(report_path), 'failure_data')
-#        os.makedirs(fialue_folder)
-#        for i in range(failure_number):
-#            plt.plot(failure_areas[i])
-#            plt.legend(['Signal'], fontsize='small')
-#            plt.title('classification failure signal')
-#            plt.savefig(os.path.join(fialue_folder, str(i)+'.png'), dpi=450, bbox_inches='tight', pad_inches=0)
-#            plt.clf()
-#    plt.close('all')    
+    return data  
 #read real data
 data_normal = list(np.loadtxt('ECG_learning_Data_normal_3.txt', delimiter=','))
 data_VPC = list(np.loadtxt('ECG_learning_Data_VPC.txt', delimiter=','))
@@ -204,7 +202,7 @@ train_data_len = 1000
 train_data_proportion = 0.5
 train_step_length = 0.0001
 #set maximun step
-maximun_epoch = 3000
+maximun_epoch = 3
 
 #set Test Model
 Test_model = 'CNN_Classfication'
@@ -285,11 +283,11 @@ start_time = time.time()
 for i in range(maximun_epoch):
     batch_xs, batch_ys = random_batch(x_traindata, y_traindata, batch_num=100)
     train_error = sess.run(cross_entropy, feed_dict={x:batch_xs, y_:batch_ys, keep_prob: 1.0})
-#    test_error = sess.run(cross_entropy, feed_dict={x:x_testdata,y_:y_testdata, keep_prob: 1.0})
-#    train_errors.append(train_error)
-#    test_errors.append(test_error)
+    test_error = sess.run(cross_entropy, feed_dict={x:x_testdata,y_:y_testdata, keep_prob: 1.0})
+    train_errors.append(train_error)
+    test_errors.append(test_error)
     if (i+1) % 100 == 0 or i==0:
-        # imformation on test   
+# imformation on test   
         train_accuracy = accuracy.eval(feed_dict={x: batch_xs, y_: batch_ys, keep_prob: 1.0})
         print("step {0:.3f}, training accuracy {1:.3f} %".format(i+1, train_accuracy*100))
         print('cross_entropy : {0}\n'.format(train_error))
