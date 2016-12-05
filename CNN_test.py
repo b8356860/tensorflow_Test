@@ -153,7 +153,7 @@ def submit_report(model, train_data, test_data, time_cost, epoch, step,
         report.write('TRAINING STEP     : {0}\n'.format(step))        
         report.write('TRAINING EPOCH    : {0}\n'.format(epoch))
         report.write('TRAINING TIME     : {0:.3f} sec\n'.format(time_cost))
-        report.write('TEST ACCURACY     : {0:.3f}%\n'.format(accuracy))
+        report.write('TEST ACCURACY     : {0:.3f}%\n'.format(accuracy*100))
         report.write('TEST FAILURE NUMBER: {0}\n'.format(failure_number))
         
         report.write('CONFUSION MATRIX  : \n')
@@ -284,7 +284,6 @@ for i in range(maximun_epoch):
     if (i+1) % 100 == 0 or i==0:
         # imformation on test   
         train_accuracy = accuracy.eval(feed_dict={x: batch_xs, y_: batch_ys, keep_prob: 1.0})
-        train_accuracy = accuracy.eval(feed_dict={x: x_testdata, y_: y_testdata, keep_prob: 1.0})
         print("step {0:.3f}, training accuracy {1:.3f} %".format(i+1, train_accuracy))
         print('cross_entropy : {0}'.format(train_error))
         
@@ -314,7 +313,7 @@ print('TRAINING MODEL    : {0}'.format(Test_model))
 print('TRAINING STEP     : {0}'.format(train_step_length))        
 print('TRAINING EPOCH    : {0}'.format(epoch))
 print('TRAINING TIME     : {0:.3f} sec'.format(time_cost))
-print('TEST ACCURACY     : {0:.3f}%'.format(test_accuracy))
+print('TEST ACCURACY     : {0:.3f}%'.format(test_accuracy*100))
 print('CONFUSION MATRIX  : ')
 print confusion_matrix
 print('Mission complete')
